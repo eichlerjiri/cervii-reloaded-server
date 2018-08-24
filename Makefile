@@ -1,7 +1,7 @@
 CFLAGS=-O2 -Wall -pedantic
 OUTNAME=cervii-reloaded-server
 
-all: main.o
+all: main.o linked_list.o
 	gcc $(CFLAGS) -o $(OUTNAME) $^ -pthread ../websocket-server/websocket-server.a
 
 %.o : %.c
