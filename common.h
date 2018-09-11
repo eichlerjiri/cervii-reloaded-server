@@ -6,7 +6,6 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-char* strdupx(const char *s);
 void pthread_mutex_initx(pthread_mutex_t *restrict mutex);
 void pthread_mutex_destroyx(pthread_mutex_t *mutex);
 void pthread_mutex_lockx(pthread_mutex_t *mutex);

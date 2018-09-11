@@ -7,7 +7,6 @@ void bqueue_init(struct bqueue *q) {
 }
 
 void bqueue_destroy(struct  bqueue *q) {
-	llist_destroy(&q->list);
 	pthread_mutex_destroyx(&q->lock);
 	pthread_cond_destroyx(&q->cond);
 }

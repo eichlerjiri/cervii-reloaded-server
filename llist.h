@@ -13,7 +13,6 @@ struct llist {
 };
 
 void llist_init(struct llist *list);
-void llist_destroy(struct llist *list);
 void llist_add_tail(struct llist *list, void *data);
 void* llist_rem_head(struct llist *list);
 void llist_rem_item(struct llist *list, void *data);

@@ -8,14 +8,11 @@ void llist_init(struct llist *list) {
 	list->size = 0;
 }
 
-void llist_destroy(struct llist *list) {
-	while (llist_rem_head(list));
-}
-
 void llist_add_tail(struct llist *list, void *data) {
-	struct llist_item *item = callocx(1, sizeof(struct llist_item));
-	list->size++;
+	struct llist_item *item = mallocx(sizeof(struct llist_item));
+	item->next = NULL;
 	item->data = data;
+	list->size++;
 
 	if (list->tail) {
 		list->tail->next = item;

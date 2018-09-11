@@ -4,17 +4,6 @@
 #include <string.h>
 #include <errno.h>
 
-char* strdupx(const char *s) {
-	char *ret = strdup(s);
-	if (!ret) {
-		fatal("Cannot strdup: %s", strerror(errno));
-	}
-#ifdef TRACE_H
-	trace_start("MEM", ret, "strdup");
-#endif
-	return ret;
-}
-
 void pthread_mutex_initx(pthread_mutex_t *restrict mutex) {
 	int ret = pthread_mutex_init(mutex, NULL);
 	if (ret) {
