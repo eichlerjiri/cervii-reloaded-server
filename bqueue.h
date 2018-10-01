@@ -11,7 +11,7 @@ struct bqueue {
 };
 
 void bqueue_init(struct bqueue *q);
-void bqueue_destroy(struct  bqueue *q);
+void bqueue_destroy(struct bqueue *q);
 void bqueue_add_tail(struct bqueue *q, void *data);
 void* bqueue_rem_head(struct bqueue *q);
 

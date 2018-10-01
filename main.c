@@ -4,9 +4,7 @@
 #include "../websocket-server/websocket.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <stddef.h>
 #include <string.h>
-#include <errno.h>
 #include <pthread.h>
 #include <math.h>
 
@@ -22,7 +20,7 @@ struct client_data {
 	unsigned long long ping;
 
 	// game status
-	int num;
+	unsigned char num;
 	double x;
 	double y;
 	double angle;
@@ -36,7 +34,7 @@ struct queued_msg {
 	char *text;
 };
 
-struct queued_msg* qitem_prep(struct client_data *cd, int type, char *text) {
+struct queued_msg* qitem_prep(struct client_data *cd, int type, const char *text) {
 	struct queued_msg *msg = mallocx(sizeof(struct queued_msg));
 	msg->cd = cd;
 	msg->type = type;
@@ -87,11 +85,11 @@ void disconnected(struct websocket_client *client) {
 	bqueue_add_tail(client->ctx->ex, qitem_prep(client->ex, 3, NULL));
 }
 
-void received(struct websocket_client *client, char *text) {
+void received(struct websocket_client *client, const char *text) {
 	bqueue_add_tail(client->ctx->ex, qitem_prep(client->ex, 2, text));
 }
 
-void csend(struct client_data *cd, char *text) {
+void csend(struct client_data *cd, const char *text) {
 	bqueue_add_tail(&cd->senderq, qitem_prep(cd, 2, text));
 }
 
@@ -108,7 +106,7 @@ void end_game(struct client_data *cd) {
 
 	cd->status = 'C';
 	cd->opponent->status = 'C';
-	free(cd->game);
+	freex(cd->game);
 }
 
 void advance_player(struct client_data *cd) {
@@ -161,7 +159,7 @@ void advance_player(struct client_data *cd) {
 // 1 = move left
 // 2 = move right
 int main() {
-	srand(time(NULL));
+	srand((unsigned int) time(NULL));
 
 	struct bqueue q;
 	bqueue_init(&q);
@@ -174,7 +172,6 @@ int main() {
 
 	unsigned long long ping = 0;
 
-	//struct client_data *waiting = NULL;
 	while (1) {
 		struct queued_msg *msg = bqueue_rem_head(&q);
 
@@ -236,14 +233,14 @@ int main() {
 							llist_rem_item(&waiting, p);
 
 							p->status = 'S';
-							p->num = i + 1;
+							p->num = (unsigned char) (i + 1);
 							p->x = x;
 							p->y = y;
 							p->angle = angle * M_PI / 180;
 							p->game = game;
 						}
 						for (int i = 0; i < 2; i++) {
-							start[2] = '1' + i;
+							start[2] = (char) ('1' + i);
 							csend(players[i], start);
 						}
 

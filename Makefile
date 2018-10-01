@@ -1,4 +1,4 @@
-CFLAGS=-O2 -Wall -pedantic
+CFLAGS=-O2 -ffunction-sections -fdata-sections -Wl,--gc-sections -pedantic -Wall -Wwrite-strings -Wconversion
 OUTNAME=cervii-reloaded-server
 
 all: common.o llist.o bqueue.o main.o

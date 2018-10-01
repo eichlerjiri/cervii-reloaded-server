@@ -9,7 +9,7 @@ struct llist_item {
 struct llist {
 	struct llist_item *head;
 	struct llist_item *tail;
-	int size;
+	unsigned int size;
 };
 
 void llist_init(struct llist *list);
