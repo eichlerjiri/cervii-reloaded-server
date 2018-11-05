@@ -1,32 +1,54 @@
 #include "bqueue.h"
+#include "../websocket-server/common.h"
+#include <string.h>
 
-void bqueue_init(struct bqueue *q) {
-	llist_init(&q->list);
-	pthread_mutex_initx(&q->lock);
-	pthread_cond_initx(&q->cond);
+void bqueue_init(struct bqueue *q, size_t item_size) {
+	q->item_size = item_size;
+	q->head = NULL;
+	q->tail = NULL;
+	c_pthread_mutex_init(&q->lock);
+	c_pthread_cond_init(&q->cond);
 }
 
-void bqueue_destroy(struct  bqueue *q) {
-	pthread_mutex_destroyx(&q->lock);
-	pthread_cond_destroyx(&q->cond);
+void bqueue_destroy(struct bqueue *q) {
+	c_pthread_mutex_destroy(&q->lock);
+	c_pthread_cond_destroy(&q->cond);
 }
 
-void bqueue_add_tail(struct bqueue *q, void *data) {
-	pthread_mutex_lockx(&q->lock);
+void bqueue_add(struct bqueue *q, void *data) {
+	c_pthread_mutex_lock(&q->lock);
 
-	llist_add_tail(&q->list, data);
+	struct bqueue_item *item = c_malloc(sizeof(struct bqueue_item) + q->item_size);
+	item->next = NULL;
+	memcpy(item + 1, data, q->item_size);
 
-	pthread_cond_signalx(&q->cond);
-	pthread_mutex_unlockx(&q->lock);
+	if (q->tail) {
+		q->tail->next = item;
+	} else {
+		q->head = item;
+	}
+	q->tail = item;
+
+	c_pthread_cond_signal(&q->cond);
+	c_pthread_mutex_unlock(&q->lock);
 }
 
-void* bqueue_rem_head(struct bqueue *q) {
-	pthread_mutex_lockx(&q->lock);
-	while (!q->list.head) {
-		pthread_cond_waitx(&q->cond, &q->lock);
+void bqueue_rem(struct bqueue *q, void *data) {
+	c_pthread_mutex_lock(&q->lock);
+
+	struct bqueue_item *item;
+	while (!(item = q->head)) {
+		c_pthread_cond_wait(&q->cond, &q->lock);
 	}
 
-	void *data = llist_rem_head(&q->list);
-	pthread_mutex_unlockx(&q->lock);
-	return data;
+	memcpy(data, item + 1, q->item_size);
+
+	q->head = item->next;
+	if (!item->next) {
+		q->tail = NULL;
+	}
+
+	c_free(item);
+
+	c_pthread_mutex_unlock(&q->lock);
 }

@@ -1,21 +1,37 @@
 #include "common.h"
 #include "../websocket-server/common.h"
+#if ENABLE_TRACE
 #include "../websocket-server/trace.h"
+#endif
+#include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 
-void pthread_mutex_initx(pthread_mutex_t *restrict mutex) {
+void *c_realloc(void *ptr, size_t size) {
+	void *ret = realloc(ptr, size);
+	if (!ret) {
+		fatal("Cannot realloc %li: %s", size, strerror(errno));
+	}
+#if ENABLE_TRACE
+	if (!ptr) {
+		trace_start("MEM", ret, "realloc");
+	}
+#endif
+	return ret;
+}
+
+void c_pthread_mutex_init(pthread_mutex_t *restrict mutex) {
 	int ret = pthread_mutex_init(mutex, NULL);
 	if (ret) {
 		fatal("Cannot pthread_mutex_init: %s", strerror(ret));
 	}
-#ifdef TRACE_H
+#if ENABLE_TRACE
 	trace_start("MTX", mutex, "pthread_mutex_init");
 #endif
 }
 
-void pthread_mutex_destroyx(pthread_mutex_t *mutex) {
-#ifdef TRACE_H
+void c_pthread_mutex_destroy(pthread_mutex_t *mutex) {
+#if ENABLE_TRACE
 	trace_end("MTX", mutex, "pthread_mutex_destroy");
 #endif
 	int ret = pthread_mutex_destroy(mutex);
@@ -24,32 +40,32 @@ void pthread_mutex_destroyx(pthread_mutex_t *mutex) {
 	}
 }
 
-void pthread_mutex_lockx(pthread_mutex_t *mutex) {
+void c_pthread_mutex_lock(pthread_mutex_t *mutex) {
 	int ret = pthread_mutex_lock(mutex);
 	if (ret) {
 		fatal("Cannot pthread_mutex_lock: %s", strerror(ret));
 	}
 }
 
-void pthread_mutex_unlockx(pthread_mutex_t *mutex) {
+void c_pthread_mutex_unlock(pthread_mutex_t *mutex) {
 	int ret = pthread_mutex_unlock(mutex);
 	if (ret) {
 		fatal("Cannot pthread_mutex_unlock: %s", strerror(ret));
 	}
 }
 
-void pthread_cond_initx(pthread_cond_t *restrict cond) {
+void c_pthread_cond_init(pthread_cond_t *restrict cond) {
 	int ret = pthread_cond_init(cond, NULL);
 	if (ret) {
 		fatal("Cannot pthread_cond_init: %s", strerror(ret));
 	}
-#ifdef TRACE_H
+#if ENABLE_TRACE
 	trace_start("CND", cond, "pthread_cond_init");
 #endif
 }
 
-void pthread_cond_destroyx(pthread_cond_t *cond) {
-#ifdef TRACE_H
+void c_pthread_cond_destroy(pthread_cond_t *cond) {
+#if ENABLE_TRACE
 	trace_end("CND", cond, "pthread_cond_destroy");
 #endif
 	int ret = pthread_cond_destroy(cond);
@@ -58,14 +74,14 @@ void pthread_cond_destroyx(pthread_cond_t *cond) {
 	}
 }
 
-void pthread_cond_waitx(pthread_cond_t *cond, pthread_mutex_t *lock) {
+void c_pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *lock) {
 	int ret = pthread_cond_wait(cond, lock);
 	if (ret) {
 		fatal("Cannot pthread_cond_wait: %s", strerror(ret));
 	}
 }
 
-void pthread_cond_signalx(pthread_cond_t *cond) {
+void c_pthread_cond_signal(pthread_cond_t *cond) {
 	int ret = pthread_cond_signal(cond);
 	if (ret) {
 		fatal("Cannot pthread_cond_signal: %s", strerror(ret));
