@@ -13,7 +13,10 @@ void *c_realloc(void *ptr, size_t size) {
 		fatal("Cannot realloc %li: %s", size, strerror(errno));
 	}
 #if ENABLE_TRACE
-	if (!ptr) {
+	if (ptr != ret) {
+		if (ptr) {
+			trace_end("MEM", ptr, "realloc");
+		}
 		trace_start("MEM", ret, "realloc");
 	}
 #endif

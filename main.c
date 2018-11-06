@@ -36,38 +36,39 @@ struct queued_msg {
 };
 
 void queue_add(struct bqueue *q, struct client_data *cd, int type, const char *text) {
-	struct queued_msg msg;
-	msg.cd = cd;
-	msg.type = type;
+	struct queued_msg *msg = c_malloc(sizeof(struct queued_msg));
+	msg->cd = cd;
+	msg->type = type;
 	if (text) {
-		msg.text = c_strdup(text);
+		msg->text = c_strdup(text);
 	} else {
-		msg.text = NULL;
+		msg->text = NULL;
 	}
-	bqueue_add(q, &msg);
+	bqueue_add(q, msg);
 }
 
 void* sender_thread(void *ptr) {
 	struct client_data *cd = ptr;
 	while (1) {
-		struct queued_msg msg;
-		bqueue_rem(&cd->senderq, &msg);
-		if (msg.type == 3) {
-			c_free(msg.text);
+		struct queued_msg *msg = bqueue_rem(&cd->senderq);
+		if (msg->type == 3) {
+			c_free(msg->text);
+			c_free(msg);
 			websocket_close(cd->client);
 			bqueue_destroy(&cd->senderq);
 			c_free(cd);
 			return NULL;
 		}
-		websocket_send(cd->client->out, msg.text);
-		c_free(msg.text);
+		websocket_send(cd->client->out, msg->text);
+		c_free(msg->text);
+		c_free(msg);
 	}
 }
 
 void connected(struct websocket_client *client) {
 	struct client_data *cd = c_malloc(sizeof(struct client_data));
 	cd->client = client;
-	bqueue_init(&cd->senderq, sizeof(struct queued_msg));
+	bqueue_init(&cd->senderq);
 	cd->status = 'C';
 
 	client->ex = cd;
@@ -157,23 +158,22 @@ int main() {
 	srand((unsigned int) time(NULL));
 
 	struct bqueue q;
-	bqueue_init(&q, sizeof(struct queued_msg));
+	bqueue_init(&q);
 
 	struct websocket_context ctx = {&connected, &disconnected, &received, &q};
 	c_pthread_create(listen_thread, &ctx);
 
 	struct alist waiting;
-	alist_init_ptr(&waiting);
+	alist_init(&waiting);
 
 	unsigned long long ping = 0;
 
 	while (1) {
-		struct queued_msg msg;
-		bqueue_rem(&q, &msg);
+		struct queued_msg *msg = bqueue_rem(&q);
 
-		struct client_data *cd = msg.cd;
-		int type = msg.type;
-		char *text = msg.text;
+		struct client_data *cd = msg->cd;
+		int type = msg->type;
+		char *text = msg->text;
 
 		//printf("RECEIVED: %s\n", text);
 
@@ -181,26 +181,26 @@ int main() {
 			if (cd->status == 'S') {
 				end_game(cd);
 			}
-			alist_rem_ptr(&waiting, cd);
+			alist_rem(&waiting, cd);
 			queue_add(&cd->senderq, cd, 3, NULL); // stop sender
 		} else if (type == 2) {
 			if (cd->status == 'C' && !strcmp(text, "R")) {
 				cd->status = 'W';
-				alist_add_ptr(&waiting, cd);
+				alist_add(&waiting, cd);
 
 				cd->ping_start = ping;
 				cd->ping = ping;
 
 				// ping to all waiting
-				for (unsigned int i = 0; i < waiting.length; i++) {
-					csend(alist_get_ptr(&waiting, i), "P");
+				for (size_t i = 0; i < waiting.size; i++) {
+					csend(waiting.data[i], "P");
 				}
 				ping++;
 			} else if (cd->status == 'W' && !strcmp(text, "A")) {
 				cd->ping++;
 
-				for (unsigned int i = 0; i < waiting.length; i++) {
-					struct client_data *curcd = alist_get_ptr(&waiting, i);
+				for (size_t i = 0; i < waiting.size; i++) {
+					struct client_data *curcd = waiting.data[i];
 					if (curcd != cd && MIN(curcd->ping, cd->ping) >
 					MAX(curcd->ping_start, cd->ping_start)) {
 						struct client_data* players[] = {curcd, cd};
@@ -223,7 +223,7 @@ int main() {
 							strcat(start, startp);
 
 							struct client_data *p = players[i];
-							alist_rem_ptr(&waiting, p);
+							alist_rem(&waiting, p);
 
 							p->status = 'S';
 							p->num = (unsigned char) (i + 1);
@@ -256,6 +256,7 @@ int main() {
 			}
 		}
 
-		c_free(msg.text);
+		c_free(msg->text);
+		c_free(msg);
 	}
 }
