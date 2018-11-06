@@ -1,13 +1,6 @@
-#include "alist.h"
-#include "bqueue.h"
-#include "../websocket-server/common.h"
-#include "../websocket-server/server.h"
-#include "../websocket-server/websocket.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <pthread.h>
-#include <math.h>
+#include "common.c"
+#include "alist.c"
+#include "bqueue.c"
 
 struct client_data {
 	// connection tokens
@@ -35,7 +28,7 @@ struct queued_msg {
 	char *text;
 };
 
-void queue_add(struct bqueue *q, struct client_data *cd, int type, const char *text) {
+static void queue_add(struct bqueue *q, struct client_data *cd, int type, const char *text) {
 	struct queued_msg *msg = c_malloc(sizeof(struct queued_msg));
 	msg->cd = cd;
 	msg->type = type;
@@ -47,7 +40,7 @@ void queue_add(struct bqueue *q, struct client_data *cd, int type, const char *t
 	bqueue_add(q, msg);
 }
 
-void* sender_thread(void *ptr) {
+static void* sender_thread(void *ptr) {
 	struct client_data *cd = ptr;
 	while (1) {
 		struct queued_msg *msg = bqueue_rem(&cd->senderq);
@@ -65,7 +58,7 @@ void* sender_thread(void *ptr) {
 	}
 }
 
-void connected(struct websocket_client *client) {
+static void connected(struct websocket_client *client) {
 	struct client_data *cd = c_malloc(sizeof(struct client_data));
 	cd->client = client;
 	bqueue_init(&cd->senderq);
@@ -77,24 +70,24 @@ void connected(struct websocket_client *client) {
 	c_pthread_create(sender_thread, cd);
 }
 
-void disconnected(struct websocket_client *client) {
+static void disconnected(struct websocket_client *client) {
 	queue_add(client->ctx->ex, client->ex, 3, NULL);
 }
 
-void received(struct websocket_client *client, const char *text) {
+static void received(struct websocket_client *client, const char *text) {
 	queue_add(client->ctx->ex, client->ex, 2, text);
 }
 
-void csend(struct client_data *cd, const char *text) {
+static void csend(struct client_data *cd, const char *text) {
 	queue_add(&cd->senderq, cd, 2, text);
 }
 
-void* listen_thread(void *ptr) {
+static void* listen_thread(void *ptr) {
 	websocket_listen(1100, ptr);
 	return NULL;
 }
 
-void end_game(struct client_data *cd) {
+static void end_game(struct client_data *cd) {
 	char end[16];
 	sprintf(end, "E %i", cd->opponent->num);
 	csend(cd, end);
@@ -105,7 +98,7 @@ void end_game(struct client_data *cd) {
 	c_free(cd->game);
 }
 
-void advance_player(struct client_data *cd) {
+static void advance_player(struct client_data *cd) {
 	double vsin = sin(cd->angle);
 	double vcos = cos(cd->angle);
 

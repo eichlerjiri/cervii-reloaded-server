@@ -1,19 +1,5 @@
-ENABLE_TRACE=0
+CFLAGS=-O2 -pedantic -Wall -Wwrite-strings -Wconversion -Wno-unused-function -DENABLE_TRACE=0
 
-ifneq ($(ENABLE_TRACE), 0)
-TRACE_FLAG=-DENABLE_TRACE=1
-else
-TRACE_FLAG=
-endif
-
-CFLAGS=-O2 -ffunction-sections -fdata-sections -Wl,--gc-sections -pedantic -Wall -Wwrite-strings -Wconversion
-OUTNAME=cervii-reloaded-server
-
-all: common.o alist.o bqueue.o main.o
-	gcc $(CFLAGS) -o $(OUTNAME) $^ -pthread -lm ../websocket-server/websocket-server.a
-
-%.o : %.c
-	gcc $(CFLAGS) $(TRACE_FLAG) -c -o $@ $<
-
-clean:
-	rm *.o $(OUTNAME)
+cervii-reloaded-server: phony
+	gcc $(CFLAGS) -o $@ $@.c -lm -lpthread ../websocket-server/websocket-server.a
+phony:

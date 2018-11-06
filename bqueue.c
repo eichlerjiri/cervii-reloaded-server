@@ -1,20 +1,28 @@
-#include "bqueue.h"
-#include "../websocket-server/common.h"
-#include <string.h>
+struct bqueue_item {
+	struct bqueue_item *next;
+	void *data;
+};
 
-void bqueue_init(struct bqueue *q) {
+struct bqueue {
+	struct bqueue_item *head;
+	struct bqueue_item *tail;
+	pthread_mutex_t lock;
+	pthread_cond_t cond;
+};
+
+static void bqueue_init(struct bqueue *q) {
 	q->head = NULL;
 	q->tail = NULL;
 	c_pthread_mutex_init(&q->lock);
 	c_pthread_cond_init(&q->cond);
 }
 
-void bqueue_destroy(struct bqueue *q) {
+static void bqueue_destroy(struct bqueue *q) {
 	c_pthread_mutex_destroy(&q->lock);
 	c_pthread_cond_destroy(&q->cond);
 }
 
-void bqueue_add(struct bqueue *q, void *data) {
+static void bqueue_add(struct bqueue *q, void *data) {
 	struct bqueue_item *item = c_malloc(sizeof(struct bqueue_item));
 	item->next = NULL;
 	item->data = data;
@@ -32,7 +40,7 @@ void bqueue_add(struct bqueue *q, void *data) {
 	c_pthread_mutex_unlock(&q->lock);
 }
 
-void *bqueue_rem(struct bqueue *q) {
+static void *bqueue_rem(struct bqueue *q) {
 	c_pthread_mutex_lock(&q->lock);
 
 	struct bqueue_item *item;
